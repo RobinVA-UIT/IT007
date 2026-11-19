@@ -91,16 +91,16 @@ static int getKey(PCB p, int iCriteria) {
     }
 }
 
-int sameArrivalTieBreak(PCB P[], int src, int n) {
-    int lowest = src;
-    for (int i = src + 1; i < n; ++i) {
-        if (P[i].iArrival == P[src].iArrival) {
-            if (P[i].iBurst < P[lowest].iBurst) lowest = i;
-        } else
+int countSameArrivals(PCB P[], int n) {
+    int numOfSameArrivals = 1;
+    for (int i = 1; i < n; ++i) {
+        if (P[i].iArrival == P[0].iArrival)
+            ++numOfSameArrivals;
+        else
             break;
     }
 
-    return lowest;
+    return numOfSameArrivals;
 }
 
 void quickSort(PCB P[], int low, int high, int iCriteria) {
@@ -168,7 +168,7 @@ void calculateATaT(int n, PCB P[]) {
 int main() {
     PCB Input[10];
     PCB ReadyQueue[10];
-    PCB TerminatedArray[100];
+    PCB TerminatedArray[100];  // gantt chart
 
     int iNumberOfProcess;
     printf("========SHORTEST JOB FIRST========\n");
@@ -189,94 +189,80 @@ int main() {
     quickSort(Input, 0, iNumberOfProcess % 11 - 1, SORT_BY_ARRIVAL);
 
     // Trong trường hợp các process cùng đến sớm nhất có Burst Time khác nhau
-    // Gọi hàm này để xác định process có Burst Time nhỏ nhất
-    int iStartingProcess = sameArrivalTieBreak(Input, 0, iNumberOfProcess % 11);
+    // 1. Tìm số lượng process có cùng arrivals
+    // 2. Sort từ 0 đến cnt-1, với tiêu chí SORT_BY_BURST
+    int iCntSameArrivals = countSameArrivals(Input, iNumberOfProcess % 11);
+    quickSort(Input, 0, iCntSameArrivals - 1, SORT_BY_BURST);
 
-    // Đưa process đầu tiên vào trong ReadyQueue
-    pushProcess(&iReady, ReadyQueue, Input[iStartingProcess]);
-    removeProcess(&iRemain, iStartingProcess, Input);
+    // Vì là process đầu, và không trưng dụng, ta set các thông số cho process
+    // này
+    Input[0].iStart = Input[0].iArrival;
+    Input[0].iFinish = Input[0].iStart + Input[0].iBurst;
+    Input[0].iResponse = Input[0].iStart - Input[0].iArrival;
+    Input[0].iWaiting = Input[0].iResponse;
+    Input[0].iTaT = Input[0].iFinish - Input[0].iArrival;
 
-    ReadyQueue[0].iStart = ReadyQueue[0].iArrival;
-    ReadyQueue[0].iFinish = ReadyQueue[0].iStart + ReadyQueue[0].iBurst;
-    ReadyQueue[0].iResponse = ReadyQueue[0].iStart - ReadyQueue[0].iArrival;
-    ReadyQueue[0].iWaiting = ReadyQueue[0].iResponse;
-    ReadyQueue[0].iTaT = ReadyQueue[0].iFinish - ReadyQueue[0].iArrival;
-
-    // Trường hợp process đầu tiên không bắt đầu vào thời điểm 0
+    // Trường hợp process đầu tiên không arrive vào thời điểm 0
     // Ta push idle state vào TerminatedArray
-    if (ReadyQueue[0].iStart != 0) {
+    if (Input[0].iArrival != 0) {
         idle.iStart = 0;
         idle.iArrival = 0;
-        idle.iFinish = ReadyQueue[0].iStart;
+        idle.iFinish = Input[0].iArrival;
         idle.iWaiting = 0;
 
         pushProcess(&iTerminated, TerminatedArray, idle);
         iIdle++;
     }
 
-    if (iNumberOfProcess % 11 == 1) {
+    // Đưa process đầu tiên vào trong ReadyQueue
+    pushProcess(&iReady, ReadyQueue, Input[0]);
+    removeProcess(&iRemain, 0, Input);
+
+    while (iTerminated - iIdle < iNumberOfProcess % 11) {
+        while (iRemain > 0 && Input[0].iArrival <= ReadyQueue[0].iFinish) {
+            pushProcess(&iReady, ReadyQueue, Input[0]);
+            removeProcess(&iRemain, 0, Input);
+        }
+
         pushProcess(&iTerminated, TerminatedArray, ReadyQueue[0]);
         removeProcess(&iReady, 0, ReadyQueue);
-    }
 
-    else {
-        while (iTerminated - iIdle < iNumberOfProcess % 11) {
-            // Khi các process ở Input đến sau thời điểm kết thúc của process
-            // chuẩn bị được chọn, ta đẩy vào ReadyQueue
-            while (iRemain > 0 && Input[0].iArrival <= ReadyQueue[0].iFinish) {
-                pushProcess(&iReady, ReadyQueue, Input[0]);
-                removeProcess(&iRemain, 0, Input);
-            }
+        // Nếu ko có process nào Ready, nhưng Remain vẫn còn
+        //  => CPU trống, add idle vào ReadyQueue
+        if (iReady == 0 && iRemain > 0) {
+            idle.iStart = TerminatedArray[iTerminated - 1].iFinish;
+            idle.iFinish = Input[0].iArrival;
 
-            // Khi trong hàng đợi Ready có 1 process, và vẫn còn process
-            // trong Input, ta biết rằng các process còn lại trong Input vẫn
-            // chưa arrive.
-            // Ta chèn idle state vào ReadyQueue
-            if (iReady == 1 && iRemain > 0) {
-                idle.iArrival = ReadyQueue[0].iFinish;
-                idle.iStart = idle.iArrival;
-                idle.iBurst = Input[0].iArrival - ReadyQueue[0].iFinish;
-                idle.iFinish = idle.iStart + idle.iBurst;
-                idle.iWaiting = 0;
+            pushProcess(&iReady, ReadyQueue, idle);
 
-                pushProcess(&iReady, ReadyQueue, idle);
-                iIdle++;
-            }
-            pushProcess(&iTerminated, TerminatedArray, ReadyQueue[0]);
-            removeProcess(&iReady, 0, ReadyQueue);
-
-            // Push các process trong ReadyQueue vào TerminatedArray
-            // Chừa lại đúng 1 process trong ReadyQueue để tính toán thời
-            // gian cho các process sau
+            ++iIdle;
+        } else {
             while (iReady > 0) {
-                // Dispatch: Chọn process có burst thấp nhất
+                // Tiếp tục sort theo burst time
+                // Vì trước khi kết thúc 1 lần lặp while, sẽ có process mới được
+                // push
                 quickSort(ReadyQueue, 0, iReady - 1, SORT_BY_BURST);
 
                 ReadyQueue[0].iStart = TerminatedArray[iTerminated - 1].iFinish;
-                ReadyQueue[0].iResponse =
-                    ReadyQueue[0].iStart - ReadyQueue[0].iArrival;
-
                 ReadyQueue[0].iFinish =
                     ReadyQueue[0].iStart + ReadyQueue[0].iBurst;
-
+                ReadyQueue[0].iResponse =
+                    ReadyQueue[0].iStart - ReadyQueue[0].iArrival;
                 ReadyQueue[0].iTaT =
                     ReadyQueue[0].iFinish - ReadyQueue[0].iArrival;
                 ReadyQueue[0].iWaiting =
                     ReadyQueue[0].iTaT - ReadyQueue[0].iBurst;
 
-                // Trong trường hợp process phía sau đến
-                // Ta cũng đẩy vào ReadyQueue
+                // Push process mới vào ReadyQueue
                 while (iRemain > 0 &&
                        Input[0].iArrival <= ReadyQueue[0].iFinish) {
                     pushProcess(&iReady, ReadyQueue, Input[0]);
                     removeProcess(&iRemain, 0, Input);
                 }
 
-                if (iReady > 1) {
-                    pushProcess(&iTerminated, TerminatedArray, ReadyQueue[0]);
-                    removeProcess(&iReady, 0, ReadyQueue);
-                } else
-                    break;
+                // Đưa process ở đầu ReadyQueue vào gantt
+                pushProcess(&iTerminated, TerminatedArray, ReadyQueue[0]);
+                removeProcess(&iReady, 0, ReadyQueue);
             }
         }
     }
