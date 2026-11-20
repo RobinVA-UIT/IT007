@@ -16,6 +16,7 @@ typedef struct {
 
 void inputProcess(int n, PCB P[]) {
     for (int i = 0; i < n; ++i) {
+        printf("\n---------------------");
         printf("\nEnter PID: ");
         scanf("%d", &P[i].iPID);
 
@@ -176,7 +177,7 @@ int main() {
 
     int iNumberOfProcess;
     printf("========SHORTEST REMAINING TIME FIRST========\n");
-    printf("Please input number of Process (modulo 11): ");
+    printf("Please input number of Process: ");
     scanf("%d", &iNumberOfProcess);
 
     if (iNumberOfProcess % 11 == 0) {
@@ -292,7 +293,7 @@ int main() {
         }
     }
 
-    printf("\n===== SRTF Scheduling =====\n");
+    printf("\n\n===== SRTF Scheduling =====\n");
     exportGanttChart(iTerminated, TerminatedArray);
     calculateAWT(iTerminated, TerminatedArray);
     calculateATaT(iTerminated, TerminatedArray);
