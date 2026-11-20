@@ -176,18 +176,18 @@ int main() {
     printf("Please enter number of Process: ");
     scanf("%d", &iNumberOfProcess);
 
-    if (iNumberOfProcess % 11 == 0) {
+    if (iNumberOfProcess < 1 || iNumberOfProcess > 10) {
         printf("The number of process is not valid.");
         return -1;
     }
 
-    int iRemain = iNumberOfProcess % 11, iReady = 0, iTerminated = 0, iIdle = 0;
+    int iRemain = iNumberOfProcess, iReady = 0, iTerminated = 0, iIdle = 0;
 
     PCB idle;
     idle.iPID = -1;
 
-    inputProcess(iNumberOfProcess % 11, Input);
-    quickSort(Input, 0, iNumberOfProcess % 11 - 1, SORT_BY_ARRIVAL);
+    inputProcess(iNumberOfProcess, Input);
+    quickSort(Input, 0, iNumberOfProcess - 1, SORT_BY_ARRIVAL);
 
     // Trong trường hợp các process cùng đến sớm nhất có Burst Time khác nhau
     // 1. Tìm số lượng process có cùng arrivals
@@ -219,7 +219,7 @@ int main() {
     pushProcess(&iReady, ReadyQueue, Input[0]);
     removeProcess(&iRemain, 0, Input);
 
-    while (iTerminated - iIdle < iNumberOfProcess % 11) {
+    while (iTerminated - iIdle < iNumberOfProcess) {
         while (iRemain > 0 && Input[0].iArrival <= ReadyQueue[0].iFinish) {
             pushProcess(&iReady, ReadyQueue, Input[0]);
             removeProcess(&iRemain, 0, Input);

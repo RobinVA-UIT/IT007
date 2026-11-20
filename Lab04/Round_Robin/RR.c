@@ -172,7 +172,7 @@ int main() {
     printf("Please input number of Process: ");
     scanf("%d", &iNumberOfProcess);
 
-    if (iNumberOfProcess % 11 == 0) {
+    if (iNumberOfProcess < 1 || iNumberOfProcess > 10) {
         printf("The number of process is not valid.");
         return -1;
     }

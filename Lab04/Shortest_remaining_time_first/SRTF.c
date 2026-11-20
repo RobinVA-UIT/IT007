@@ -180,19 +180,19 @@ int main() {
     printf("Please input number of Process: ");
     scanf("%d", &iNumberOfProcess);
 
-    if (iNumberOfProcess % 11 == 0) {
+    if (iNumberOfProcess < 1 || iNumberOfProcess > 10) {
         printf("The number of process is not valid.");
         return -1;
     }
 
-    int iRemain = iNumberOfProcess % 11, iReady = 0, iTerminated = 0,
-        iCompleted = 0, iTime = 0;
+    int iRemain = iNumberOfProcess, iReady = 0, iTerminated = 0, iCompleted = 0,
+        iTime = 0;
 
     PCB idle, temp;
     idle.iPID = -1;
 
-    inputProcess(iNumberOfProcess % 11, Input);
-    quickSort(Input, 0, iNumberOfProcess % 11 - 1, SORT_BY_ARRIVAL);
+    inputProcess(iNumberOfProcess, Input);
+    quickSort(Input, 0, iNumberOfProcess - 1, SORT_BY_ARRIVAL);
 
     // Trong số các process đứng đầu sau sort (có arrival bằng nhau)
     //, ta cần sắp xếp lại theo burst time
@@ -216,7 +216,7 @@ int main() {
     // Cần 1 biến xác định index của process vừa chạy trước đó
     int lastRunning = -1;
 
-    while (iCompleted < iNumberOfProcess % 11) {
+    while (iCompleted < iNumberOfProcess) {
         int idx = -1;
 
         // Cứ mỗi đơn vị time, ta lại tìm process đã arrive có burst bé nhất
